@@ -4,11 +4,19 @@ const rlz = @import("raylib-zig");
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    
+
     const raylib_dep = b.dependency("raylib-zig", .{
         .target = target,
         .optimize = optimize,
+        .opengl_version = rlz.OpenglVersion.gl_1_1,
     });
+
+    // gl_1_1,
+    // gl_2_1,
+    // gl_3_3,
+    // gl_4_3,
+    // gles_2,
+    // gles_3,
 
     const raylib = raylib_dep.module("raylib");
     const raylib_artifact = raylib_dep.artifact("raylib");
@@ -34,7 +42,12 @@ pub fn build(b: *std.Build) !void {
         return;
     }
 
-    const exe = b.addExecutable(.{ .name = "zigraylibtest", .root_source_file = b.path("src/main.zig"), .optimize = optimize, .target = target });
+    const exe = b.addExecutable(.{
+        .name = "zigraylibtest",
+        .root_source_file = b.path("src/main.zig"),
+        .optimize = optimize,
+        .target = target,
+    });
 
     exe.linkLibrary(raylib_artifact);
     exe.root_module.addImport("raylib", raylib);
