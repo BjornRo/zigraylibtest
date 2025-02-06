@@ -1,4 +1,29 @@
 const rl = @import("raylib");
+const rlm = rl.math;
+const rlc = rl.Color;
+const Vec2 = rl.Vector2;
+
+fn drawLines(origin: Vec2, scale: f32, points: []const Vec2, thickness: f32) void {
+    const Transformer = struct {
+        origin: Vec2,
+        scale: f32,
+
+        fn apply(self: @This(), point: Vec2) Vec2 {
+            return rlm.vector2Add(rlm.vector2Scale(point, self.scale), self.origin);
+        }
+    };
+
+    const t = Transformer{ .origin = origin, .scale = scale };
+
+    for (points, 0..) |p, i| {
+        rl.drawLineEx(
+            t.apply(p),
+            t.apply(points[(i + 1) % points.len]),
+            thickness,
+            rlc.orange,
+        );
+    }
+}
 
 pub fn main() anyerror!void {
     // Initialization
@@ -28,11 +53,15 @@ pub fn main() anyerror!void {
         defer rl.endDrawing();
 
         rl.clearBackground(rl.Color.white);
-        rl.drawLineEx(
-            .{ .x = width * 0.2, .y = height * 0.1 },
-            .{ .x = width * 0.8, .y = height * 0.3 },
+        drawLines(
+            .{ .x = width * 0.5, .y = height * 0.5 },
+            60,
+            &.{
+                Vec2.init(0, -0.5),
+                Vec2.init(-0.5, 0.5),
+                Vec2.init(0.5, 0.5),
+            },
             5,
-            rl.Color.red,
         );
         //----------------------------------------------------------------------------------
     }
