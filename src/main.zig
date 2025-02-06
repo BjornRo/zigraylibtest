@@ -1,5 +1,3 @@
-// raylib-zig (c) Nikolas Wipper 2023
-
 const rl = @import("raylib");
 
 pub fn main() anyerror!void {
@@ -21,14 +19,21 @@ pub fn main() anyerror!void {
         // TODO: Update your variables here
         //----------------------------------------------------------------------------------
 
+        const width: f32 = @floatFromInt(rl.getScreenWidth());
+        const height: f32 = @floatFromInt(rl.getScreenHeight());
+
         // Draw
         //----------------------------------------------------------------------------------
         rl.beginDrawing();
         defer rl.endDrawing();
 
         rl.clearBackground(rl.Color.white);
-
-        rl.drawText("Congrats! You created your first window!", 190, 200, 20, rl.Color.light_gray);
+        rl.drawLineEx(
+            .{ .x = width * 0.2, .y = height * 0.1 },
+            .{ .x = width * 0.8, .y = height * 0.3 },
+            5,
+            rl.Color.red,
+        );
         //----------------------------------------------------------------------------------
     }
 }

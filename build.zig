@@ -8,7 +8,7 @@ pub fn build(b: *std.Build) !void {
     const raylib_dep = b.dependency("raylib-zig", .{
         .target = target,
         .optimize = optimize,
-        .opengl_version = rlz.OpenglVersion.gl_1_1,
+        .opengl_version = rlz.OpenglVersion.gl_2_1,
     });
 
     // gl_1_1,
