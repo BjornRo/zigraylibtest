@@ -4,6 +4,7 @@ const math = std.math;
 const rlm = rl.math;
 const rlc = rl.Color;
 const Vec2 = rl.Vector2;
+const Vec3 = rl.Vector3;
 
 const screen_width = 800;
 const screen_height = 450;
@@ -118,6 +119,26 @@ const Triangle = struct {
     }
 };
 
+const Cube = struct {
+    pos: Vec3,
+    dim: f32,
+
+    const Self = @This();
+    pub fn init(pos: Vec3, dim: f32) Self {
+        return .{ .pos = pos, .dim = dim };
+    }
+
+    pub fn draw(self: *Self) void {
+        rl.drawCube(self.pos, self.dim, self.dim, self.dim, rlc.dark_green);
+    }
+
+    pub fn update(self: *Self) void {
+        _ = self;
+        // self.rot += math.tau * 0.01;
+        // self.rot = @mod(self.rot, math.pi * 2);
+    }
+};
+
 fn update() void {
     for (active_state.entities) |e| {
         e.update();
@@ -140,8 +161,8 @@ fn run() void {
             Vec2.init(-0.5, 0.5),
             Vec2.init(0.5, 0.5),
         },
-        .{ .x = width * 0.5, .y = height * 0.5 },
-        0.0,
+        .{ .x = width * 0.9, .y = height * 0.5 },
+        math.pi,
     );
     var triangle2 = Triangle.init(
         &.{
@@ -153,9 +174,12 @@ fn run() void {
         0.0,
     );
 
+    var cube = Cube.init(.{ .x = width * 0.5, .y = width * 0.5, .z = -100 }, 50);
+
     active_state = State{ .entities = &.{
         EntityInterface.init(&triangle),
         EntityInterface.init(&triangle2),
+        EntityInterface.init(&cube),
     } };
 
     while (!rl.windowShouldClose()) { // Detect window close button or ESC key
