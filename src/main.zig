@@ -80,6 +80,10 @@ fn drawMainMenu(state: *GameState) void {
 // }
 
 fn run(allocator: Allocator) !void {
+    var arena = std.heap.ArenaAllocator.init(allocator);
+    defer arena.deinit();
+    const arena_alloc = arena.allocator();
+
     var prng = std.Random.DefaultPrng.init(0);
     const rand = prng.random();
 
@@ -119,6 +123,7 @@ fn run(allocator: Allocator) !void {
     rl.setTargetFPS(60);
 
     while (true) {
+        defer _ = arena.reset(.retain_capacity);
         if (rl.isKeyPressed(.escape)) {
             rl.beginDrawing();
             rl.endDrawing();
@@ -211,11 +216,11 @@ fn run(allocator: Allocator) !void {
         rl.drawText("- Zoom keys: num-plus, num-minus or mouse scroll", 15, 75, 10, Color.black);
         rl.drawText("- Camera projection key: P", 15, 90, 10, Color.black);
 
-        rl.drawRectangle(600, 5, 195, 100, Color.fade(Color.sky_blue, 0.5));
-        rl.drawRectangleLines(600, 5, 195, 100, Color.blue);
+        rl.drawRectangle(600, 5, 195, 115, Color.fade(Color.sky_blue, 0.5));
+        rl.drawRectangleLines(600, 5, 195, 115, Color.blue);
 
         rl.drawText("Camera status:", 610, 15, 10, Color.black);
-        const mode_text = blk: {
+        rl.drawText(blk: {
             const text = switch (camera_mode) {
                 .free => "FREE",
                 .first_person => "FIRST_PERSON",
@@ -223,40 +228,31 @@ fn run(allocator: Allocator) !void {
                 .orbital => "ORBITAL",
                 .custom => "CUSTOM",
             };
-            break :blk try std.fmt.allocPrintZ(allocator, "- Mode: {s}", .{text});
-        };
-        defer allocator.free(mode_text);
-        rl.drawText(mode_text, 610, 30, 10, Color.black);
-
-        const proj_text = blk: {
+            break :blk try std.fmt.allocPrintZ(arena_alloc, "- Mode: {s}", .{text});
+        }, 610, 30, 10, Color.black);
+        rl.drawText(blk: {
             const text = if (camera.projection == .perspective) "PERSPECTIVE" else "ORTHOGRAPHIC";
-            break :blk try std.fmt.allocPrintZ(allocator, "- Projection: {s}", .{text});
-        };
-        defer allocator.free(proj_text);
-        rl.drawText(proj_text, 610, 45, 10, Color.black);
-
-        const pos_text = try std.fmt.allocPrintZ(
-            allocator,
-            "- Position: ({d:.3}, {d:.3}, {d:.3}",
+            break :blk try std.fmt.allocPrintZ(arena_alloc, "- Projection: {s}", .{text});
+        }, 610, 45, 10, Color.black);
+        rl.drawText(try std.fmt.allocPrintZ(
+            arena_alloc,
+            "- Position: ({d:.3}, {d:.3}, {d:.3})",
             .{ camera.position.x, camera.position.y, camera.position.z },
-        );
-        defer allocator.free(pos_text);
-        rl.drawText(pos_text, 610, 60, 10, Color.black);
-
-        const targ_text = try std.fmt.allocPrintZ(
-            allocator,
-            "- Target: ({d:.3}, {d:.3}, {d:.3}",
+        ), 610, 60, 10, Color.black);
+        rl.drawText(try std.fmt.allocPrintZ(
+            arena_alloc,
+            "- Target: ({d:.3}, {d:.3}, {d:.3})",
             .{ camera.target.x, camera.target.y, camera.target.z },
-        );
-        defer allocator.free(targ_text);
-        rl.drawText(targ_text, 610, 75, 10, Color.black);
-
-        const up_text = try std.fmt.allocPrintZ(
-            allocator,
-            "- Up: ({d:.3}, {d:.3}, {d:.3}",
+        ), 610, 75, 10, Color.black);
+        rl.drawText(try std.fmt.allocPrintZ(
+            arena_alloc,
+            "- Up: ({d:.3}, {d:.3}, {d:.3})",
             .{ camera.up.x, camera.up.y, camera.up.z },
-        );
-        defer allocator.free(up_text);
-        rl.drawText(up_text, 610, 90, 10, Color.black);
+        ), 610, 90, 10, Color.black);
+        rl.drawText(try std.fmt.allocPrintZ(
+            arena_alloc,
+            "- Frame time: {d:.3}ms",
+            .{rl.getFrameTime() * 1000},
+        ), 610, 105, 10, Color.black);
     }
 }
