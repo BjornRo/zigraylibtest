@@ -1,22 +1,27 @@
 const std = @import("std");
+const Allocator = std.mem.Allocator;
 const rl = @import("raylib");
 const math = std.math;
 const rlm = rl.math;
-const rlc = rl.Color;
+const rcamera = @import("camera.zig");
+const Color = rl.Color;
 const Vec2 = rl.Vector2;
 const Vec3 = rl.Vector3;
 
 const screen_width = 800;
 const screen_height = 450;
-var active_state: State = undefined;
 
 const GameState = enum { MainMenu, Playing };
 
 pub fn main() anyerror!void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer if (gpa.deinit() == .leak) std.testing.expect(false) catch @panic("TEST FAIL");
+    const allocator = gpa.allocator();
+
     rl.initWindow(screen_width, screen_height, "raylib-zig [core] example - basic window");
     defer rl.closeWindow();
 
-    rl.setTargetFPS(60);
+    rl.setTargetFPS(10);
 
     var state: GameState = .MainMenu;
 
@@ -26,7 +31,7 @@ pub fn main() anyerror!void {
                 drawMainMenu(&state);
             },
             .Playing => {
-                run();
+                try run(allocator);
                 state = .MainMenu;
             },
         }
@@ -51,171 +56,195 @@ fn drawMainMenu(state: *GameState) void {
     rl.clearBackground(rl.Color.sky_blue);
 
     if (hovering) {
-        rl.drawRectangle(btn_x, btn_y, BUTTON_WIDTH, BUTTON_HEIGHT, rlc.dark_gray);
+        rl.drawRectangle(btn_x, btn_y, BUTTON_WIDTH, BUTTON_HEIGHT, Color.dark_gray);
         if (rl.isMouseButtonPressed(.left)) {
             state.* = GameState.Playing;
         }
     } else {
-        rl.drawRectangle(btn_x, btn_y, BUTTON_WIDTH, BUTTON_HEIGHT, rlc.gray);
+        rl.drawRectangle(btn_x, btn_y, BUTTON_WIDTH, BUTTON_HEIGHT, Color.gray);
     }
 
-    rl.drawText("Start", btn_x + 60, btn_y + 15, 20, rlc.black);
+    rl.drawText("Start", btn_x + 60, btn_y + 15, 20, Color.black);
 }
 
-const EntityInterface = struct {
-    ptr: *anyopaque,
-    drawFn: *const fn (*anyopaque) void,
-    updateFn: *const fn (*anyopaque) void,
+// fn update() void {
+//     for (active_state.entities) |e| {
+//         e.update();
+//     }
+// }
 
-    pub fn init(impl: anytype) EntityInterface {
-        const Wrapper = struct {
-            fn draw(ptr: *anyopaque) void {
-                const self: @TypeOf(impl) = @ptrCast(@alignCast(ptr));
-                self.draw();
+// fn render() void {
+//     for (active_state.entities) |e| {
+//         e.draw();
+//     }
+// }
+
+fn run(allocator: Allocator) !void {
+    var prng = std.Random.DefaultPrng.init(0);
+    const rand = prng.random();
+
+    const max_columns = 20;
+    // const width: f32 = @floatFromInt(rl.getScreenWidth());
+    // const height: f32 = @floatFromInt(rl.getScreenHeight());
+
+    var camera = rl.Camera{
+        .position = .{ .x = 0, .y = 2, .z = 4 },
+        .target = .{ .x = 0, .y = 2, .z = 0 },
+        .up = .{ .x = 0, .y = 1, .z = 0 },
+        .fovy = 60,
+        .projection = .perspective,
+    };
+
+    var camera_mode: rl.CameraMode = .first_person;
+
+    var heights: [max_columns]f32 = undefined;
+    var positions: [max_columns]Vec3 = undefined;
+    var colors: [max_columns]Color = undefined;
+
+    for (0..max_columns) |i| {
+        heights[i] = @floatFromInt(rand.intRangeAtMost(i8, 1, 12));
+        positions[i] = Vec3.init(
+            @floatFromInt(rand.intRangeAtMost(i8, -15, 15)),
+            heights[i] / 2.0,
+            @floatFromInt(rand.intRangeAtMost(i8, -15, 15)),
+        );
+        colors[i] = Color.init(rand.intRangeAtMost(u8, 20, 255), rand.intRangeAtMost(u8, 10, 55), 30, 255);
+    }
+
+    rl.disableCursor();
+    defer rl.enableCursor();
+
+    rl.setTargetFPS(60);
+
+    while (true) {
+        if (rl.isKeyPressed(.escape)) {
+            rl.beginDrawing();
+            rl.endDrawing();
+            break;
+        }
+
+        if (rl.isKeyPressed(.one)) {
+            camera_mode = .free;
+            camera.up = .{ .x = 0, .y = 1, .z = 0 };
+        }
+        if (rl.isKeyPressed(.two)) {
+            camera_mode = .first_person;
+            camera.up = .{ .x = 0, .y = 1, .z = 0 };
+        }
+        if (rl.isKeyPressed(.three)) {
+            camera_mode = .third_person;
+            camera.up = .{ .x = 0, .y = 1, .z = 0 };
+        }
+        if (rl.isKeyPressed(.four)) {
+            camera_mode = .orbital;
+            camera.up = .{ .x = 0, .y = 1, .z = 0 };
+        }
+
+        if (rl.isKeyPressed(.p)) {
+            switch (camera.projection) {
+                .perspective => {
+                    camera_mode = .third_person;
+                    camera.position = .{ .x = 0, .y = 2, .z = -100 };
+                    camera.target = .{ .x = 0, .y = 2, .z = 0 };
+                    camera.up = .{ .x = 0, .y = 1, .z = 0 };
+                    camera.projection = .orthographic;
+                    camera.fovy = 20;
+                    rcamera.cameraYaw(&camera, std.math.degreesToRadians(-135), true);
+                    rcamera.cameraPitch(&camera, std.math.degreesToRadians(-45), true, true, true);
+                },
+                .orthographic => {
+                    camera_mode = .third_person;
+                    camera.position = .{ .x = 0, .y = 2, .z = 10 };
+                    camera.target = .{ .x = 0, .y = 2, .z = 0 };
+                    camera.up = .{ .x = 0, .y = 1, .z = 0 };
+                    camera.projection = .perspective;
+                    camera.fovy = 60;
+                },
             }
-            fn update(ptr: *anyopaque) void {
-                const self: @TypeOf(impl) = @ptrCast(@alignCast(ptr));
-                self.update();
-            }
-        };
+        }
 
-        return .{
-            .ptr = @ptrCast(@alignCast(impl)),
-            .drawFn = Wrapper.draw,
-            .updateFn = Wrapper.update,
-        };
-    }
-
-    pub fn draw(self: *const EntityInterface) void {
-        self.drawFn(self.ptr);
-    }
-
-    pub fn update(self: *const EntityInterface) void {
-        self.updateFn(self.ptr);
-    }
-};
-
-const State = struct {
-    entities: []const EntityInterface,
-};
-
-const Triangle = struct {
-    points: []const Vec2,
-    pos: Vec2,
-    rot: f32,
-
-    const Self = @This();
-    pub fn init(points: []const Vec2, pos: Vec2, rot: f32) Self {
-        return .{ .points = points, .pos = pos, .rot = rot };
-    }
-
-    pub fn draw(self: *Self) void {
-        drawLines(self.pos, 60, self.rot, self.points, 5);
-    }
-
-    pub fn update(self: *Self) void {
-        self.rot += math.tau * 0.01;
-        self.rot = @mod(self.rot, math.pi * 2);
-    }
-};
-
-const Cube = struct {
-    pos: Vec3,
-    dim: f32,
-
-    const Self = @This();
-    pub fn init(pos: Vec3, dim: f32) Self {
-        return .{ .pos = pos, .dim = dim };
-    }
-
-    pub fn draw(self: *Self) void {
-        rl.drawCube(self.pos, self.dim, self.dim, self.dim, rlc.dark_green);
-    }
-
-    pub fn update(self: *Self) void {
-        _ = self;
-        // self.rot += math.tau * 0.01;
-        // self.rot = @mod(self.rot, math.pi * 2);
-    }
-};
-
-fn update() void {
-    for (active_state.entities) |e| {
-        e.update();
-    }
-}
-
-fn render() void {
-    for (active_state.entities) |e| {
-        e.draw();
-    }
-}
-
-fn run() void {
-    const width: f32 = @floatFromInt(rl.getScreenWidth());
-    const height: f32 = @floatFromInt(rl.getScreenHeight());
-
-    var triangle = Triangle.init(
-        &.{
-            Vec2.init(0, -0.5),
-            Vec2.init(-0.5, 0.5),
-            Vec2.init(0.5, 0.5),
-        },
-        .{ .x = width * 0.9, .y = height * 0.5 },
-        math.pi,
-    );
-    var triangle2 = Triangle.init(
-        &.{
-            Vec2.init(0, -0.5),
-            Vec2.init(-0.5, 0.5),
-            Vec2.init(0.5, 0.5),
-        },
-        .{ .x = width * 0.1, .y = height * 0.1 },
-        0.0,
-    );
-
-    var cube = Cube.init(.{ .x = width * 0.5, .y = width * 0.5, .z = -100 }, 50);
-
-    active_state = State{ .entities = &.{
-        EntityInterface.init(&triangle),
-        EntityInterface.init(&triangle2),
-        EntityInterface.init(&cube),
-    } };
-
-    while (!rl.windowShouldClose()) { // Detect window close button or ESC key
-        update();
+        rl.updateCamera(&camera, camera_mode);
 
         rl.beginDrawing();
         defer rl.endDrawing();
 
-        rl.clearBackground(rlc.white);
+        rl.clearBackground(Color.ray_white);
+        {
+            rl.beginMode3D(camera);
+            defer rl.endMode3D();
 
-        render();
-    }
-}
+            rl.drawPlane(Vec3.init(0, 0, 0), Vec2.init(32, 32), Color.light_gray); // Draw ground
+            rl.drawCube(Vec3.init(-16, 2.5, 0), 1, 5, 32, Color.blue); // Draw a blue wall
+            rl.drawCube(Vec3.init(16, 2.5, 0), 1, 5, 32, Color.lime); // Draw a green wall
+            rl.drawCube(Vec3.init(0, 2.5, 16), 32, 5, 1, Color.gold); // Draw a yellow wall
 
-fn drawLines(origin: Vec2, scale: f32, rotation: f32, points: []const Vec2, thickness: f32) void {
-    const Transformer = struct {
-        origin: Vec2,
-        scale: f32,
-        rotation: f32,
+            for (0..max_columns) |i| {
+                rl.drawCube(positions[i], 2, heights[i], 2, colors[i]);
+                rl.drawCubeWires(positions[i], 2, heights[i], 2, Color.maroon);
 
-        fn apply(self: @This(), point: Vec2) Vec2 {
-            return rlm.vector2Add(
-                rlm.vector2Scale(rlm.vector2Rotate(point, self.rotation), self.scale),
-                self.origin,
-            );
+                if (camera_mode == .third_person) {
+                    rl.drawCube(camera.target, 0.5, 0.5, 0.5, Color.purple);
+                    rl.drawCubeWires(camera.target, 0.5, 0.5, 0.5, Color.dark_purple);
+                }
+            }
         }
-    };
 
-    const t = Transformer{ .origin = origin, .scale = scale, .rotation = rotation };
+        rl.drawRectangle(5, 5, 330, 100, Color.fade(Color.sky_blue, 0.5));
+        rl.drawRectangleLines(5, 5, 330, 100, Color.blue);
 
-    for (points, 0..) |p, i| {
-        rl.drawLineEx(
-            t.apply(p),
-            t.apply(points[(i + 1) % points.len]),
-            thickness,
-            rlc.orange,
+        rl.drawText("Camera controls:", 15, 15, 10, Color.black);
+        rl.drawText("- Move keys: W, A, S, D", 15, 30, 10, Color.black);
+        rl.drawText("- Look around: arrow keys or mouse", 15, 45, 10, Color.black);
+        rl.drawText("- Camera mode keys: 1, 2, 3, 4", 15, 60, 10, Color.black);
+        rl.drawText("- Zoom keys: num-plus, num-minus or mouse scroll", 15, 75, 10, Color.black);
+        rl.drawText("- Camera projection key: P", 15, 90, 10, Color.black);
+
+        rl.drawRectangle(600, 5, 195, 100, Color.fade(Color.sky_blue, 0.5));
+        rl.drawRectangleLines(600, 5, 195, 100, Color.blue);
+
+        rl.drawText("Camera status:", 610, 15, 10, Color.black);
+        const mode_text = blk: {
+            const text = switch (camera_mode) {
+                .free => "FREE",
+                .first_person => "FIRST_PERSON",
+                .third_person => "THIRD_PERSON",
+                .orbital => "ORBITAL",
+                .custom => "CUSTOM",
+            };
+            break :blk try std.fmt.allocPrintZ(allocator, "- Mode: {s}", .{text});
+        };
+        defer allocator.free(mode_text);
+        rl.drawText(mode_text, 610, 30, 10, Color.black);
+
+        const proj_text = blk: {
+            const text = if (camera.projection == .perspective) "PERSPECTIVE" else "ORTHOGRAPHIC";
+            break :blk try std.fmt.allocPrintZ(allocator, "- Projection: {s}", .{text});
+        };
+        defer allocator.free(proj_text);
+        rl.drawText(proj_text, 610, 45, 10, Color.black);
+
+        const pos_text = try std.fmt.allocPrintZ(
+            allocator,
+            "- Position: ({d:.3}, {d:.3}, {d:.3}",
+            .{ camera.position.x, camera.position.y, camera.position.z },
         );
+        defer allocator.free(pos_text);
+        rl.drawText(pos_text, 610, 60, 10, Color.black);
+
+        const targ_text = try std.fmt.allocPrintZ(
+            allocator,
+            "- Target: ({d:.3}, {d:.3}, {d:.3}",
+            .{ camera.target.x, camera.target.y, camera.target.z },
+        );
+        defer allocator.free(targ_text);
+        rl.drawText(targ_text, 610, 75, 10, Color.black);
+
+        const up_text = try std.fmt.allocPrintZ(
+            allocator,
+            "- Up: ({d:.3}, {d:.3}, {d:.3}",
+            .{ camera.up.x, camera.up.y, camera.up.z },
+        );
+        defer allocator.free(up_text);
+        rl.drawText(up_text, 610, 90, 10, Color.black);
     }
 }
