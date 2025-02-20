@@ -146,6 +146,12 @@ fn run(allocator: Allocator) !void {
             camera_mode = .orbital;
             camera.up = .{ .x = 0, .y = 1, .z = 0 };
         }
+        if (rl.isKeyPressed(.left_control)) {
+            camera.position.y -= 0.005;
+        }
+        if (rl.isKeyPressed(.space)) {
+            camera.position.y += 0.005;
+        }
 
         if (rl.isKeyPressed(.p)) {
             switch (camera.projection) {
@@ -170,7 +176,12 @@ fn run(allocator: Allocator) !void {
             }
         }
 
+        // const y = camera.target.y;
         rl.updateCamera(&camera, camera_mode);
+        if (camera.position.y <= 1) {
+            camera.position.y = 1;
+            // camera.target.y = y;
+        }
 
         rl.beginDrawing();
         defer rl.endDrawing();
