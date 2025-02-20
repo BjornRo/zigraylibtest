@@ -1,64 +1,32 @@
 const std = @import("std");
+const Allocator = std.mem.Allocator;
 const rl = @import("raylib");
 const math = std.math;
 const rlm = rl.math;
-const rlc = rl.Color;
+const rlc = @import("rcamera.zig");
+const Color = rl.Color;
 const Vec2 = rl.Vector2;
 const Vec3 = rl.Vector3;
 
-const EntityInterface = struct {
-    ptr: *anyopaque,
-    drawFn: *const fn (*anyopaque) void,
-    updateFn: *const fn (*anyopaque) void,
+pub const Player = struct {
+    position: Vec3,
+    velocity: Vec3,
+    speed: f32,
+    controller: *const ControllerType,
 
-    pub fn init(impl: anytype) EntityInterface {
-        const Wrapper = struct {
-            fn draw(ptr: *anyopaque) void {
-                const self: @TypeOf(impl) = @ptrCast(@alignCast(ptr));
-                self.draw();
-            }
-            fn update(ptr: *anyopaque) void {
-                const self: @TypeOf(impl) = @ptrCast(@alignCast(ptr));
-                self.update();
-            }
-        };
-
-        return .{
-            .ptr = @ptrCast(@alignCast(impl)),
-            .drawFn = Wrapper.draw,
-            .updateFn = Wrapper.update,
-        };
-    }
-
-    pub fn draw(self: *const EntityInterface) void {
-        self.drawFn(self.ptr);
-    }
-
-    pub fn update(self: *const EntityInterface) void {
-        self.updateFn(self.ptr);
-    }
-};
-
-const State = struct {
-    entities: []const EntityInterface,
-};
-
-const Cube = struct {
-    pos: Vec3,
-    dim: f32,
-
+    const ControllerType = fn (position: *Vec3, velocity: *Vec3, speed: f32, delta_time: f32) void;
     const Self = @This();
-    pub fn init(pos: Vec3, dim: f32) Self {
-        return .{ .pos = pos, .dim = dim };
+
+    pub fn init(position: Vec3, speed: f32, controller: ControllerType) Self {
+        return .{
+            .position = position,
+            .speed = speed,
+            .controller = controller,
+            .velocity = Vec3.init(0, 0, 0),
+        };
     }
 
-    pub fn draw(self: *Self) void {
-        rl.drawCube(self.pos, self.dim, self.dim, self.dim, rlc.dark_green);
-    }
-
-    pub fn update(self: *Self) void {
-        _ = self;
-        // self.rot += math.tau * 0.01;
-        // self.rot = @mod(self.rot, math.pi * 2);
+    pub fn update(self: *Self, delta_time: f32) void {
+        self.controller(&self.position, &self.velocity, self.speed, delta_time);
     }
 };

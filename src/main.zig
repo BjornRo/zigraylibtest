@@ -4,39 +4,20 @@ const rl = @import("raylib");
 const math = std.math;
 const rlm = rl.math;
 const rlc = @import("rcamera.zig");
+const debug = @import("debug.zig");
+const Entities = @import("entities.zig");
+const Controller = @import("controller.zig");
 const Color = rl.Color;
 const Vec2 = rl.Vector2;
 const Vec3 = rl.Vector3;
+
+var prng = std.Random.DefaultPrng.init(0);
+const rand = prng.random();
 
 const screen_width = 800;
 const screen_height = 450;
 
 const GameState = enum { MainMenu, Playing };
-
-pub fn main() anyerror!void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer if (gpa.deinit() == .leak) std.testing.expect(false) catch @panic("TEST FAIL");
-    const allocator = gpa.allocator();
-
-    rl.initWindow(screen_width, screen_height, "raylib-zig [core] example - basic window");
-    defer rl.closeWindow();
-
-    rl.setTargetFPS(10);
-
-    var state: GameState = .MainMenu;
-
-    while (!rl.windowShouldClose()) {
-        switch (state) {
-            .MainMenu => {
-                drawMainMenu(&state);
-            },
-            .Playing => {
-                try run(allocator);
-                state = .MainMenu;
-            },
-        }
-    }
-}
 
 fn drawMainMenu(state: *GameState) void {
     const BUTTON_WIDTH = 200;
@@ -67,6 +48,31 @@ fn drawMainMenu(state: *GameState) void {
     rl.drawText("Start", btn_x + 60, btn_y + 15, 20, Color.black);
 }
 
+pub fn main() anyerror!void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer if (gpa.deinit() == .leak) std.testing.expect(false) catch @panic("TEST FAIL");
+    const allocator = gpa.allocator();
+
+    rl.initWindow(screen_width, screen_height, "raylib-zig [core] example - basic window");
+    defer rl.closeWindow();
+
+    rl.setTargetFPS(10);
+
+    var state: GameState = .MainMenu;
+
+    while (!rl.windowShouldClose()) {
+        switch (state) {
+            .MainMenu => {
+                drawMainMenu(&state);
+            },
+            .Playing => {
+                try run(allocator);
+                state = .MainMenu;
+            },
+        }
+    }
+}
+
 // fn update() void {
 //     for (active_state.entities) |e| {
 //         e.update();
@@ -84,9 +90,6 @@ fn run(allocator: Allocator) !void {
     defer arena.deinit();
     const arena_alloc = arena.allocator();
 
-    var prng = std.Random.DefaultPrng.init(0);
-    const rand = prng.random();
-
     const max_columns = 20;
     // const width = rl.getScreenWidth();
     // const height = rl.getScreenHeight();
@@ -101,7 +104,9 @@ fn run(allocator: Allocator) !void {
         .projection = .perspective,
     };
 
-    var camera_mode: rl.CameraMode = .first_person;
+    var player = Entities.Player.init(Vec3.init(0, 1, 0), 5, Controller.keyboard);
+
+    const camera_mode: rl.CameraMode = .first_person;
 
     var heights: [max_columns]f32 = undefined;
     var positions: [max_columns]Vec3 = undefined;
@@ -130,58 +135,14 @@ fn run(allocator: Allocator) !void {
             break;
         }
 
-        if (rl.isKeyPressed(.one)) {
-            camera_mode = .free;
-            camera.up = .{ .x = 0, .y = 1, .z = 0 };
-        }
-        if (rl.isKeyPressed(.two)) {
-            camera_mode = .first_person;
-            camera.up = .{ .x = 0, .y = 1, .z = 0 };
-        }
-        if (rl.isKeyPressed(.three)) {
-            camera_mode = .third_person;
-            camera.up = .{ .x = 0, .y = 1, .z = 0 };
-        }
-        if (rl.isKeyPressed(.four)) {
-            camera_mode = .orbital;
-            camera.up = .{ .x = 0, .y = 1, .z = 0 };
-        }
-        if (rl.isKeyPressed(.left_control)) {
-            camera.position.y -= 0.005;
-        }
-        if (rl.isKeyPressed(.space)) {
-            camera.position.y += 0.005;
-        }
+        const delta_time = rl.getFrameTime();
+        player.update(delta_time);
 
-        if (rl.isKeyPressed(.p)) {
-            switch (camera.projection) {
-                .perspective => {
-                    camera_mode = .third_person;
-                    camera.position = .{ .x = 0, .y = 2, .z = -100 };
-                    camera.target = .{ .x = 0, .y = 2, .z = 0 };
-                    camera.up = .{ .x = 0, .y = 1, .z = 0 };
-                    camera.projection = .orthographic;
-                    camera.fovy = 20;
-                    rlc.cameraYaw(&camera, math.degreesToRadians(-135), true);
-                    rlc.cameraPitch(&camera, math.degreesToRadians(-45), true, true, false);
-                },
-                .orthographic => {
-                    camera_mode = .third_person;
-                    camera.position = .{ .x = 0, .y = 2, .z = 10 };
-                    camera.target = .{ .x = 0, .y = 2, .z = 0 };
-                    camera.up = .{ .x = 0, .y = 1, .z = 0 };
-                    camera.projection = .perspective;
-                    camera.fovy = 60;
-                },
-            }
-        }
+        camera.position = player.position;
+        camera.position.y += 1.5;
+        camera.target = Vec3.init(player.position.x, player.position.y + 1.5, player.position.z - 1);
 
-        const y = camera.target.y;
         rl.updateCamera(&camera, camera_mode);
-        if (camera.position.y <= 1) {
-            camera.position.y = 1;
-            camera.target.y = y;
-        }
 
         rl.beginDrawing();
         defer rl.endDrawing();
@@ -217,53 +178,6 @@ fn run(allocator: Allocator) !void {
         rl.drawLineEx(Vec2.init(fwidth / 2, fheight / 2 - 12), Vec2.init(fwidth / 2, fheight / 2 - 4), 2, Color.green);
         rl.drawLineEx(Vec2.init(fwidth / 2, fheight / 2 + 4), Vec2.init(fwidth / 2, fheight / 2 + 12), 2, Color.green);
 
-        rl.drawRectangle(5, 5, 330, 100, Color.fade(Color.sky_blue, 0.5));
-        rl.drawRectangleLines(5, 5, 330, 100, Color.blue);
-
-        rl.drawText("Camera controls:", 15, 15, 10, Color.black);
-        rl.drawText("- Move keys: W, A, S, D", 15, 30, 10, Color.black);
-        rl.drawText("- Look around: arrow keys or mouse", 15, 45, 10, Color.black);
-        rl.drawText("- Camera mode keys: 1, 2, 3, 4", 15, 60, 10, Color.black);
-        rl.drawText("- Zoom keys: num-plus, num-minus or mouse scroll", 15, 75, 10, Color.black);
-        rl.drawText("- Camera projection key: P", 15, 90, 10, Color.black);
-
-        rl.drawRectangle(600, 5, 195, 115, Color.fade(Color.sky_blue, 0.5));
-        rl.drawRectangleLines(600, 5, 195, 115, Color.blue);
-
-        rl.drawText("Camera status:", 610, 15, 10, Color.black);
-        rl.drawText(blk: {
-            const text = switch (camera_mode) {
-                .free => "FREE",
-                .first_person => "FIRST_PERSON",
-                .third_person => "THIRD_PERSON",
-                .orbital => "ORBITAL",
-                .custom => "CUSTOM",
-            };
-            break :blk try std.fmt.allocPrintZ(arena_alloc, "- Mode: {s}", .{text});
-        }, 610, 30, 10, Color.black);
-        rl.drawText(blk: {
-            const text = if (camera.projection == .perspective) "PERSPECTIVE" else "ORTHOGRAPHIC";
-            break :blk try std.fmt.allocPrintZ(arena_alloc, "- Projection: {s}", .{text});
-        }, 610, 45, 10, Color.black);
-        rl.drawText(try std.fmt.allocPrintZ(
-            arena_alloc,
-            "- Position: ({d:.3}, {d:.3}, {d:.3})",
-            .{ camera.position.x, camera.position.y, camera.position.z },
-        ), 610, 60, 10, Color.black);
-        rl.drawText(try std.fmt.allocPrintZ(
-            arena_alloc,
-            "- Target: ({d:.3}, {d:.3}, {d:.3})",
-            .{ camera.target.x, camera.target.y, camera.target.z },
-        ), 610, 75, 10, Color.black);
-        rl.drawText(try std.fmt.allocPrintZ(
-            arena_alloc,
-            "- Up: ({d:.3}, {d:.3}, {d:.3})",
-            .{ camera.up.x, camera.up.y, camera.up.z },
-        ), 610, 90, 10, Color.black);
-        rl.drawText(try std.fmt.allocPrintZ(
-            arena_alloc,
-            "- Frame time: {d:.3}ms",
-            .{rl.getFrameTime() * 1000},
-        ), 610, 105, 10, Color.black);
+        try debug.debug_window(arena_alloc, camera_mode, camera);
     }
 }
