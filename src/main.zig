@@ -3,7 +3,7 @@ const Allocator = std.mem.Allocator;
 const rl = @import("raylib");
 const math = std.math;
 const rlm = rl.math;
-const rlc = @import("camera.zig");
+const rlc = @import("rcamera.zig");
 const Color = rl.Color;
 const Vec2 = rl.Vector2;
 const Vec3 = rl.Vector3;
@@ -156,8 +156,8 @@ fn run(allocator: Allocator) !void {
                     camera.up = .{ .x = 0, .y = 1, .z = 0 };
                     camera.projection = .orthographic;
                     camera.fovy = 20;
-                    rlc.cameraYaw(&camera, std.math.degreesToRadians(-135), true);
-                    rlc.cameraPitch(&camera, std.math.degreesToRadians(-45), true, true, true);
+                    rlc.cameraYaw(&camera, math.degreesToRadians(-135), true);
+                    rlc.cameraPitch(&camera, math.degreesToRadians(-45), true, true, true);
                 },
                 .orthographic => {
                     camera_mode = .third_person;
