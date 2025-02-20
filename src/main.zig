@@ -176,11 +176,11 @@ fn run(allocator: Allocator) !void {
             }
         }
 
-        // const y = camera.target.y;
+        const y = camera.target.y;
         rl.updateCamera(&camera, camera_mode);
         if (camera.position.y <= 1) {
             camera.position.y = 1;
-            // camera.target.y = y;
+            camera.target.y = y;
         }
 
         rl.beginDrawing();
