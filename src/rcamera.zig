@@ -38,15 +38,15 @@ const Vec3 = rl.Vector3;
 //----------------------------------------------------------------------------------
 // Defines
 //----------------------------------------------------------------------------------
-const CAMERA_MOVE_SPEED: f64 = 5.4; // Units per second
-const CAMERA_ROTATION_SPEED: f64 = 0.03;
-const CAMERA_PAN_SPEED: f64 = 0.2;
+const CAMERA_MOVE_SPEED: f32 = 5.4; // Units per second
+const CAMERA_ROTATION_SPEED: f32 = 0.03;
+const CAMERA_PAN_SPEED: f32 = 0.2;
 
 // Camera mouse movement sensitivity
-const CAMERA_MOUSE_MOVE_SENSITIVITY: f64 = 0.003;
+const CAMERA_MOUSE_MOVE_SENSITIVITY: f32 = 0.003;
 
 // Camera orbital speed in CAMERA_ORBITAL mode
-const CAMERA_ORBITAL_SPEED: f64 = 0.5; // Radians per second
+const CAMERA_ORBITAL_SPEED: f32 = 0.5; // Radians per second
 
 // Camera culling distances
 const CAMERA_CULL_DISTANCE_NEAR: f64 = 0.01;
@@ -77,7 +77,7 @@ pub fn getCameraRight(camera: *Camera) Vec3 {
 }
 
 /// Helper function to translate the camera movement.
-fn cameraMovement(camera: *Camera, position: Vec3, distance: f64) void {
+fn cameraMovement(camera: *Camera, position: Vec3, distance: f32) void {
     // Scale by distance
     const movement = rlm.vector3Scale(position, distance);
 
@@ -87,7 +87,7 @@ fn cameraMovement(camera: *Camera, position: Vec3, distance: f64) void {
 }
 
 /// Moves the camera in its forward direction
-pub fn cameraMoveForward(camera: *Camera, distance: f64, move_in_world_plane: bool) void {
+pub fn cameraMoveForward(camera: *Camera, distance: f32, move_in_world_plane: bool) void {
     var forward: Vec3 = getCameraForward(camera);
 
     if (move_in_world_plane) {
@@ -100,14 +100,14 @@ pub fn cameraMoveForward(camera: *Camera, distance: f64, move_in_world_plane: bo
 }
 
 /// Moves the camera in its forward direction
-pub fn cameraMoveUp(camera: *Camera, distance: f64) void {
+pub fn cameraMoveUp(camera: *Camera, distance: f32) void {
     const up: Vec3 = getCameraUp(camera);
 
     cameraMovement(camera, up, distance);
 }
 
 /// Moves the camera target in its current right direction
-pub fn cameraMoveRight(camera: *Camera, distance: f64, move_in_world_plane: bool) void {
+pub fn cameraMoveRight(camera: *Camera, distance: f32, move_in_world_plane: bool) void {
     var right: Vec3 = getCameraRight(camera);
 
     if (move_in_world_plane) {
@@ -120,7 +120,7 @@ pub fn cameraMoveRight(camera: *Camera, distance: f64, move_in_world_plane: bool
 }
 
 /// Moves the camera position closer/farther to/from the camera target
-pub fn cameraMoveToTarget(camera: *Camera, delta: f64) void {
+pub fn cameraMoveToTarget(camera: *Camera, delta: f32) void {
     var distance = rlm.vector3Distance(camera.position, camera.target);
 
     // Apply delta
@@ -138,7 +138,7 @@ pub fn cameraMoveToTarget(camera: *Camera, delta: f64) void {
 /// NOTE: angle must be provided in radians
 /// Yaw is "looking left and right"
 /// If rotateAroundTarget is false, the camera rotates around its position
-pub fn cameraYaw(camera: *Camera, angle: f64, rotate_around_target: bool) void {
+pub fn cameraYaw(camera: *Camera, angle: f32, rotate_around_target: bool) void {
     // Rotation axis
     const up: Vec3 = getCameraUp(camera);
 
@@ -163,7 +163,7 @@ pub fn cameraYaw(camera: *Camera, angle: f64, rotate_around_target: bool) void {
 ///  - lockView prevents camera overrotation (aka "somersaults")
 ///  - rotateAroundTarget defines if rotation is around target or around its position
 ///  - rotateUp rotates the up direction as well (typically only usefull in CAMERA_FREE)
-pub fn cameraPitch(camera: *Camera, angle: f64, lock_view: bool, rotate_around_target: bool, rotate_up: bool) void {
+pub fn cameraPitch(camera: *Camera, angle: f32, lock_view: bool, rotate_around_target: bool, rotate_up: bool) void {
     var angle_ = angle;
     // Up direction
     const up: Vec3 = getCameraUp(camera);
@@ -211,7 +211,7 @@ pub fn cameraPitch(camera: *Camera, angle: f64, lock_view: bool, rotate_around_t
 ///
 /// NOTE: angle must be provided in radians
 /// Roll is "turning your head sideways to the left or right"
-pub fn cameraRoll(camera: *Camera, angle: f64) void {
+pub fn cameraRoll(camera: *Camera, angle: f32) void {
     // Rotation axis
     const forward: Vec3 = getCameraForward(camera);
 
