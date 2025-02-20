@@ -178,13 +178,13 @@ pub fn cameraPitch(camera: *Camera, angle: f32, lock_view: bool, rotate_around_t
         // Clamp view up
         var max_angle_up = rlm.vector3Angle(up, target_position);
         max_angle_up -= 0.001; // avoid numerical errors
-        if (angle > max_angle_up) angle_ = max_angle_up;
+        if (angle_ > max_angle_up) angle_ = max_angle_up;
 
         // Clamp view down
         var max_angle_down = rlm.vector3Angle(rlm.vector3Negate(up), target_position);
         max_angle_down *= -1; // downwards angle is negative
         max_angle_down += 0.001; // avoid numerical errors
-        if (angle < max_angle_down) angle_ = max_angle_down;
+        if (angle_ < max_angle_down) angle_ = max_angle_down;
     }
 
     // Rotation axis
