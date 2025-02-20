@@ -201,10 +201,10 @@ fn run(allocator: Allocator) !void {
         // rl.drawLine(@divFloor(width, 2), @divFloor(height, 2) - 10, @divFloor(width, 2), @divFloor(height, 2) + 10, Color.green);
         // rl.drawLineEx(.{ .x = fwidth / 2 - 12, .y = fheight / 2 }, .{ .x = fwidth / 2 + 12, .y = fheight / 2 }, 3, Color.green);
         // rl.drawLineEx(.{ .x = fwidth / 2, .y = fheight / 2 - 12 }, .{ .x = fwidth / 2, .y = fheight / 2 + 12 }, 3, Color.green);
-        rl.drawLineEx(.{ .x = fwidth / 2 - 12, .y = fheight / 2 }, .{ .x = fwidth / 2 - 4, .y = fheight / 2 }, 2, Color.green);
-        rl.drawLineEx(.{ .x = fwidth / 2 + 4, .y = fheight / 2 }, .{ .x = fwidth / 2 + 12, .y = fheight / 2 }, 2, Color.green);
-        rl.drawLineEx(.{ .x = fwidth / 2, .y = fheight / 2 - 12 }, .{ .x = fwidth / 2, .y = fheight / 2 - 4 }, 2, Color.green);
-        rl.drawLineEx(.{ .x = fwidth / 2, .y = fheight / 2 + 4 }, .{ .x = fwidth / 2, .y = fheight / 2 + 12 }, 2, Color.green);
+        rl.drawLineEx(Vec2.init(fwidth / 2 - 12, fheight / 2), Vec2.init(fwidth / 2 - 4, fheight / 2), 2, Color.green);
+        rl.drawLineEx(Vec2.init(fwidth / 2 + 4, fheight / 2), Vec2.init(fwidth / 2 + 12, fheight / 2), 2, Color.green);
+        rl.drawLineEx(Vec2.init(fwidth / 2, fheight / 2 - 12), Vec2.init(fwidth / 2, fheight / 2 - 4), 2, Color.green);
+        rl.drawLineEx(Vec2.init(fwidth / 2, fheight / 2 + 4), Vec2.init(fwidth / 2, fheight / 2 + 12), 2, Color.green);
 
         rl.drawRectangle(5, 5, 330, 100, Color.fade(Color.sky_blue, 0.5));
         rl.drawRectangleLines(5, 5, 330, 100, Color.blue);
