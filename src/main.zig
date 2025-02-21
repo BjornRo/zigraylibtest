@@ -104,7 +104,7 @@ fn run(allocator: Allocator) !void {
         .projection = .perspective,
     };
 
-    var player = Entities.Player.init(Vec3.init(0, 1, 0), 5, Controller.keyboard);
+    var player = Entities.Player.init(Vec3.init(0, 1, 0), 8, Controller.keyboardMouse);
 
     const camera_mode: rl.CameraMode = .first_person;
 
@@ -139,10 +139,8 @@ fn run(allocator: Allocator) !void {
         player.update(delta_time);
 
         camera.position = player.position;
-        camera.position.y += 1.5;
-        camera.target = Vec3.init(player.position.x, player.position.y + 1.5, player.position.z - 1);
-
-        rl.updateCamera(&camera, camera_mode);
+        camera.target = player.position.add(player.camera.direction);
+        // rl.updateCamera(&camera, camera_mode);
 
         rl.beginDrawing();
         defer rl.endDrawing();
